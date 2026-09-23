@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #060b19;
+    --surface: #0a192f;
+    --card: #0f223d;
+    --foreground: #f8fafc;
+    --muted-foreground: #94a3b8;
+    --border: rgba(59, 130, 246, 0.2);
+    --accent: #3b82f6;
+    --accent-gold: #d4af37;
+  }
+
+  .light {
+    --background: #f0f4f8;
+    --surface: #ffffff;
+    --card: #e2e8f0;
+    --foreground: #0a192f;
+    --muted-foreground: #475569;
+    --border: rgba(10, 25, 47, 0.15);
+    --accent: #2563eb;
+    --accent-gold: #b48a1d;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Editorial Typography */
+.font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.magazine-label {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.hero-headline {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(2.5rem, 5.5vw, 5rem);
+  line-height: 1.08;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Outlined Luxury Button matching original design */
+.outlined-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: rgba(6, 11, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  padding: 14px 28px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.outlined-btn:hover {
+  background-color: #ffffff;
+  color: #060b19;
+  border-color: #ffffff;
+}
+
+.light .outlined-btn {
+  color: #0a192f;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #0a192f;
+}
+
+.light .outlined-btn:hover {
+  background-color: #0a192f;
+  color: #ffffff;
+}
+
+/* Category Filter Pills */
+.category-pill {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  background-color: rgba(10, 25, 47, 0.4);
+  color: var(--muted-foreground);
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.category-pill:hover {
+  color: var(--foreground);
+  border-color: var(--accent);
+}
+
+.category-pill.active {
+  background-color: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+  font-weight: 700;
+}
+
+/* Badges */
+.sale-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: #d4af37;
+  color: #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  z-index: 10;
+}
+
+.sold-out-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  z-index: 10;
+}
+
+/* Floating WhatsApp Button */
+.whatsapp-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  background-color: #25d366;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(37, 211, 102, 0.4);
+  z-index: 99;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.08);
+  box-shadow: 0 15px 30px -5px rgba(37, 211, 102, 0.6);
+}
+
+/* Slide Counter */
+.slide-counter {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slide-counter .current {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.slide-counter .line {
+  width: 32px;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Image Zoom */
+.product-card-img {
+  overflow: hidden;
+  position: relative;
+}
+
+.product-card-img img {
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.group:hover .product-card-img img {
+  transform: scale(1.05);
+}
