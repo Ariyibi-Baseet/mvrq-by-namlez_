@@ -21,8 +21,7 @@ const friendlyError = (err: unknown) => {
 };
 
 export const AdminLogin: React.FC = () => {
-  const { login, isAdminOpen, setIsAdminOpen, isAdminAuthenticated } =
-    useAuth();
+  const { login, isAdminOpen, setIsAdminOpen } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
