@@ -1,4 +1,10 @@
-export type Category = 'ALL' | 'TOPS' | 'BOTTOMS' | 'OUTERWEAR' | 'SETS' | 'ACCESSORIES';
+export type Category =
+  | "ALL"
+  | "TOPS"
+  | "BOTTOMS"
+  | "OUTERWEAR"
+  | "SETS"
+  | "ACCESSORIES";
 
 export interface ColorSwatch {
   name: string;
@@ -8,10 +14,11 @@ export interface ColorSwatch {
 export interface Product {
   id: string;
   name: string;
-  category: Exclude<Category, 'ALL'>;
+  category: Exclude<Category, "ALL">;
   price: number;
   originalPrice?: number;
-  badge?: 'SALE' | 'NEW' | 'SOLD OUT' | 'PRE-ORDER';
+  images?: string[]; // all photos; `image` stays as the cover, so ProductCard etc. keep working
+  badge?: "SALE" | "NEW" | "SOLD OUT" | "PRE-ORDER";
   inStock: boolean;
   image: string;
   description: string;
@@ -31,5 +38,5 @@ export interface CartItem {
 export interface ProductFilter {
   category: Category;
   searchQuery: string;
-  sortBy: 'featured' | 'price-low' | 'price-high' | 'newest';
+  sortBy: "featured" | "price-low" | "price-high" | "newest";
 }

@@ -1,85 +1,156 @@
-import React, { useState } from 'react';
-import { Lock, Shield, ArrowRight, X } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from "react";
+import { X, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { inputCls, labelCls, eyebrowCls, btnPrimary } from "./Adminstyles";
+
+const friendlyError = (err: unknown) => {
+  const code = (err as { code?: string })?.code;
+  switch (code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+    case "auth/invalid-email":
+      return "Incorrect email or password.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Wait a few minutes and try again.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
+    default:
+      return "Could not sign in. Please try again.";
+  }
+};
 
 export const AdminLogin: React.FC = () => {
-  const { login, isAdminOpen, setIsAdminOpen } = useAuth();
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const { login, isAdminOpen, setIsAdminOpen, isAdminAuthenticated } =
+    useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Escape closes the dialog
+  useEffect(() => {
+    if (!isAdminOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsAdminOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isAdminOpen, setIsAdminOpen]);
 
   if (!isAdminOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(password);
-    if (success) {
-      setError(false);
-      setPassword('');
-    } else {
-      setError(true);
+    setBusy(true);
+    setError("");
+    try {
+      await login(email, password);
+      setPassword("");
+      setIsAdminOpen(false); // close the modal so the dashboard is visible straight away
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/85 backdrop-blur-md animate-fade-in">
-      <div className="bg-navy-900 light:bg-white border border-navy-800 light:border-slate-300 w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative text-slate-100 light:text-navy-950">
-        
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-navy-950/90 backdrop-blur-sm animate-fade-in">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Administrator sign in"
+        className="relative w-full max-w-md bg-navy-950 light:bg-white border border-navy-800 light:border-slate-300 p-8 sm:p-10 text-slate-100 light:text-navy-950"
+      >
         <button
           onClick={() => setIsAdminOpen(false)}
-          className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white light:text-slate-600 focus:outline-none"
+          aria-label="Close"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" strokeWidth={1.5} />
         </button>
 
-        <div className="text-center space-y-4 mb-6">
-          <div className="w-14 h-14 bg-electric-500/10 text-electric-400 rounded-full flex items-center justify-center mx-auto border border-electric-500/30">
-            <Shield className="w-7 h-7" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-superwide uppercase">ADMIN PORTAL</h2>
-          <p className="text-xs font-mono text-slate-400 light:text-slate-600">
-            Enter authorized access key to manage products & inventory.
-          </p>
-        </div>
+        <p className={eyebrowCls}>Administrator</p>
+        <h2 className="font-serif text-3xl mt-2">Sign in</h2>
+        <p className="text-sm text-slate-400 mt-2">
+          Manage products, prices and stock.
+        </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div>
-            <label className="block text-xs font-mono uppercase text-slate-400 mb-1">
-              Admin Password Key
+            <label htmlFor="admin-email" className={labelCls}>
+              Email
+            </label>
+            <input
+              id="admin-email"
+              type="email"
+              required
+              autoFocus
+              autoComplete="username"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="admin-password" className={labelCls}>
+              Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                id="admin-password"
+                type={showPassword ? "text" : "password"}
                 required
+                autoComplete="current-password"
                 value={password}
-                onChange={e => {
+                onChange={(e) => {
                   setPassword(e.target.value);
-                  setError(false);
+                  setError("");
                 }}
-                placeholder="Enter password (default: admin)"
-                className="w-full bg-navy-950 light:bg-slate-50 border border-navy-800 light:border-slate-300 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-100 light:text-navy-950 focus:border-electric-500 focus:outline-none"
+                className={`${inputCls} !pr-11`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
-            {error && (
-              <p className="text-[11px] text-rose-400 font-mono mt-1">
-                Invalid access key. Try 'admin' or 'mvrq2026'.
-              </p>
-            )}
           </div>
 
-          <div className="p-3 bg-navy-950/40 rounded-xl border border-navy-850 text-[11px] font-mono text-slate-400">
-            <span className="text-electric-400 font-bold">DEFAULT CREDENTIALS:</span> Password is <code className="text-white bg-navy-800 px-1 py-0.5 rounded">admin</code>
-          </div>
+          <p
+            className="text-xs font-mono text-rose-400 min-h-[1rem]"
+            role="alert"
+          >
+            {error}
+          </p>
 
           <button
             type="submit"
-            className="w-full bg-electric-600 hover:bg-electric-500 text-white font-bold text-xs tracking-superwide uppercase py-3.5 rounded-xl transition-all shadow-lg shadow-electric-500/25 flex items-center justify-center space-x-2"
+            disabled={busy}
+            className={`${btnPrimary} w-full`}
           >
-            <span>AUTHENTICATE & ACCESS</span>
-            <ArrowRight className="w-4 h-4" />
+            {busy ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Signing in
+              </>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </form>
-
       </div>
     </div>
   );
