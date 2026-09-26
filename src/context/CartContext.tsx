@@ -1,13 +1,23 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CartItem, Product } from '../types/product';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { CartItem, Product } from "../types/product";
 
 interface CartContextType {
   cart: CartItem[];
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (product: Product, size?: string, color?: string, quantity?: number) => void;
+  addToCart: (
+    product: Product,
+    size?: string,
+    color?: string,
+    quantity?: number,
+  ) => void;
   removeFromCart: (productId: string, size: string, color: string) => void;
-  updateQuantity: (productId: string, size: string, color: string, delta: number) => void;
+  updateQuantity: (
+    productId: string,
+    size: string,
+    color: string,
+    delta: number,
+  ) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -18,14 +28,16 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('mvrq_cart');
+    const saved = localStorage.getItem("mvrq_cart");
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {
-        console.error('Failed to parse cart:', e);
+        console.error("Failed to parse cart:", e);
       }
     }
     return [];
@@ -35,24 +47,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('mvrq_cart', JSON.stringify(cart));
+    localStorage.setItem("mvrq_cart", JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (
     product: Product,
     size?: string,
     color?: string,
-    quantity: number = 1
+    quantity: number = 1,
   ) => {
-    const selectedSize = size || product.sizes[0] || 'M';
-    const selectedColor = color || product.colors[0] || 'Standard';
+    const selectedSize = size || product.sizes[0] || "M";
+    const selectedColor = color || product.colors[0] || "Standard";
 
-    setCart(prev => {
+    setCart((prev) => {
       const existingIndex = prev.findIndex(
-        item =>
+        (item) =>
           item.product.id === product.id &&
           item.selectedSize === selectedSize &&
-          item.selectedColor === selectedColor
+          item.selectedColor === selectedColor,
       );
 
       if (existingIndex > -1) {
@@ -68,15 +80,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = (productId: string, size: string, color: string) => {
-    setCart(prev =>
+    setCart((prev) =>
       prev.filter(
-        item =>
+        (item) =>
           !(
             item.product.id === productId &&
             item.selectedSize === size &&
             item.selectedColor === color
-          )
-      )
+          ),
+      ),
     );
   };
 
@@ -84,11 +96,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     productId: string,
     size: string,
     color: string,
-    delta: number
+    delta: number,
   ) => {
-    setCart(prev => {
+    setCart((prev) => {
       return prev
-        .map(item => {
+        .map((item) => {
           if (
             item.product.id === productId &&
             item.selectedSize === size &&
@@ -108,12 +120,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce(
+    (acc, item) => acc + item.product.price * item.quantity,
+    0,
+  );
 
   const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
       maximumFractionDigits: 0,
     }).format(amount);
   };
@@ -143,7 +158,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within CartProvider');
+    throw new Error("useCart must be used within CartProvider");
   }
   return context;
 };
