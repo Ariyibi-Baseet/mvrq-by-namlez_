@@ -1,13 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   X,
   CheckCircle2,
   ShieldCheck,
   Loader2,
   AlertCircle,
+  MessageCircle,
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { payWithPaystack, generateReference } from "../../lib/paystack";
+import { buildOrderWhatsAppLink } from "../../lib/whatsapp";
+import { Order } from "../../types/order";
 
 type Stage = "form" | "paying" | "verifying" | "success";
 
@@ -24,6 +27,8 @@ export const CheckoutModal: React.FC = () => {
   const [stage, setStage] = useState<Stage>("form");
   const [error, setError] = useState("");
   const [orderReference, setOrderReference] = useState("");
+  const [whatsappLink, setWhatsappLink] = useState("");
+  const autoRedirected = useRef(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -33,6 +38,17 @@ export const CheckoutModal: React.FC = () => {
     city: "Lagos",
     notes: "",
   });
+
+  // Try to open WhatsApp automatically once payment is confirmed. Many
+  // mobile browsers allow this since it follows directly from the user's
+  // own "Pay" tap; some (and most desktop browsers) block it as a popup.
+  // Either way, the button below always works as a manual fallback.
+  useEffect(() => {
+    if (stage === "success" && whatsappLink && !autoRedirected.current) {
+      autoRedirected.current = true;
+      window.open(whatsappLink, "_blank", "noopener");
+    }
+  }, [stage, whatsappLink]);
 
   if (!isCheckoutOpen) return null;
 
@@ -95,6 +111,7 @@ export const CheckoutModal: React.FC = () => {
       }
 
       setOrderReference(paystackReference);
+      setWhatsappLink(buildOrderWhatsAppLink(data.order as Order));
       setStage("success");
       setTimeout(() => clearCart(), 1200);
     } catch {
@@ -110,6 +127,8 @@ export const CheckoutModal: React.FC = () => {
     setIsCheckoutOpen(false);
     setStage("form");
     setError("");
+    setWhatsappLink("");
+    autoRedirected.current = false;
   };
 
   const busy = stage === "paying" || stage === "verifying";
@@ -133,7 +152,7 @@ export const CheckoutModal: React.FC = () => {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold tracking-superwide uppercase">
-                PAYMENT CONFIRMED
+                ORDER RECEIVED
               </h2>
               <p className="text-sm text-slate-400 font-mono">
                 Order reference:{" "}
@@ -141,16 +160,30 @@ export const CheckoutModal: React.FC = () => {
               </p>
               <p className="text-xs text-slate-300 light:text-slate-600 max-w-md mx-auto pt-2">
                 Thank you for choosing MVRQ by naMLez. Your payment has been
-                verified and our courier team in Lagos will reach out shortly
-                via phone/WhatsApp.
+                verified. You're being redirected to our delivery team on
+                WhatsApp with your order details — if nothing opens, tap the
+                button below.
               </p>
             </div>
-            <button
-              onClick={handleClose}
-              className="bg-electric-600 hover:bg-electric-500 text-white font-bold text-xs tracking-superwide uppercase px-8 py-3.5 rounded-full transition-all shadow-lg shadow-electric-500/25"
+
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5a] text-white font-bold text-xs tracking-superwide uppercase px-8 py-3.5 rounded-full transition-all shadow-lg shadow-[#25D366]/25"
             >
-              RETURN TO STORE
-            </button>
+              <MessageCircle className="w-4 h-4" />
+              CONTINUE ON WHATSAPP
+            </a>
+
+            <div>
+              <button
+                onClick={handleClose}
+                className="text-xs font-mono text-slate-400 hover:text-white light:hover:text-navy-950 underline underline-offset-2 transition-colors"
+              >
+                Return to store
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
