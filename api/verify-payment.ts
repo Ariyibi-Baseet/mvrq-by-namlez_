@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAdminDb } from "./_firebaseAdmin";
+import { getAdminDb } from "./_firebaseAdmin.js";
+// import { getAdminDb } from "./_firebaseAdmin";
 
 interface OrderItemInput {
   productId: string;
@@ -69,12 +70,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       !Array.isArray(items) ||
       items.length === 0
     ) {
-      return res
-        .status(400)
-        .json({
-          verified: false,
-          message: "Missing or invalid order details.",
-        });
+      return res.status(400).json({
+        verified: false,
+        message: "Missing or invalid order details.",
+      });
     }
 
     const adminDb = getAdminDb(); // <- throws a readable error if misconfigured; caught below
@@ -96,24 +95,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = (await paystackRes.json()) as PaystackVerifyResponse;
 
     if (!paystackRes.ok || !result.status || !result.data) {
-      return res
-        .status(402)
-        .json({
-          verified: false,
-          message: result.message || "Verification failed.",
-        });
+      return res.status(402).json({
+        verified: false,
+        message: result.message || "Verification failed.",
+      });
     }
 
     const { status, amount, currency } = result.data;
     const expectedKobo = Math.round(expectedAmountNaira * 100);
 
     if (status !== "success") {
-      return res
-        .status(402)
-        .json({
-          verified: false,
-          message: `Payment was not successful (${status}).`,
-        });
+      return res.status(402).json({
+        verified: false,
+        message: `Payment was not successful (${status}).`,
+      });
     }
     if (currency !== "NGN") {
       return res
