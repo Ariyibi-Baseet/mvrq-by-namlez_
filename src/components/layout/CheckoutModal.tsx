@@ -13,6 +13,7 @@ import { buildOrderWhatsAppLink } from "../../lib/whatsapp";
 import { Order } from "../../types/order";
 
 type Stage = "form" | "paying" | "verifying" | "success";
+const WHATSAPP_REDIRECT_DELAY_MS = 4000; // 4 seconds
 
 export const CheckoutModal: React.FC = () => {
   const {
@@ -43,11 +44,21 @@ export const CheckoutModal: React.FC = () => {
   // mobile browsers allow this since it follows directly from the user's
   // own "Pay" tap; some (and most desktop browsers) block it as a popup.
   // Either way, the button below always works as a manual fallback.
+  // useEffect(() => {
+  //   if (stage === "success" && whatsappLink && !autoRedirected.current) {
+  //     autoRedirected.current = true;
+  //     window.open(whatsappLink, "_blank", "noopener");
+  //   }
+  // }, [stage, whatsappLink]);
   useEffect(() => {
-    if (stage === "success" && whatsappLink && !autoRedirected.current) {
-      autoRedirected.current = true;
+    if (stage !== "success" || !whatsappLink || autoRedirected.current) return;
+    autoRedirected.current = true;
+
+    const timer = setTimeout(() => {
       window.open(whatsappLink, "_blank", "noopener");
-    }
+    }, WHATSAPP_REDIRECT_DELAY_MS);
+
+    return () => clearTimeout(timer);
   }, [stage, whatsappLink]);
 
   if (!isCheckoutOpen) return null;
