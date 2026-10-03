@@ -113,7 +113,7 @@ export const CheckoutModal: React.FC = () => {
       setOrderReference(paystackReference);
       setWhatsappLink(buildOrderWhatsAppLink(data.order as Order));
       setStage("success");
-      setTimeout(() => clearCart(), 1200);
+      setTimeout(() => clearCart(), 1900);
     } catch {
       setError(
         "Network error while confirming your payment. If you were charged, contact us so we can check.",
