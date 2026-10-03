@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { adminDb } from "./_firebaseAdmin";
+import { getAdminDb } from "./_firebaseAdmin";
 
 interface OrderItemInput {
   productId: string;
@@ -43,32 +43,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .json({ verified: false, message: "Method not allowed" });
   }
 
-  const secretKey = process.env.PAYSTACK_SECRET_KEY;
-  if (!secretKey) {
-    console.error("Missing PAYSTACK_SECRET_KEY");
-    return res.status(500).json({
-      verified: false,
-      message: "Payment verification is not configured.",
-    });
-  }
-
-  const body = req.body as Partial<VerifyBody>;
-  const { reference, expectedAmountNaira, customer, items } = body;
-
-  if (
-    !reference ||
-    typeof expectedAmountNaira !== "number" ||
-    !customer?.email ||
-    !customer?.fullName ||
-    !Array.isArray(items) ||
-    items.length === 0
-  ) {
-    return res
-      .status(400)
-      .json({ verified: false, message: "Missing or invalid order details." });
-  }
-
+  // Everything below — including Firebase Admin initialisation — now runs
+  // inside this try/catch, so any failure (bad env var, bad JSON, Paystack
+  // being unreachable, etc) returns a real JSON error instead of crashing
+  // the function before a response body exists.
   try {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) {
+      console.error("Missing PAYSTACK_SECRET_KEY");
+      return res.status(500).json({
+        verified: false,
+        message:
+          "Payment verification is not configured (missing Paystack secret key).",
+      });
+    }
+
+    const body = req.body as Partial<VerifyBody>;
+    const { reference, expectedAmountNaira, customer, items } = body;
+
+    if (
+      !reference ||
+      typeof expectedAmountNaira !== "number" ||
+      !customer?.email ||
+      !customer?.fullName ||
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({
+          verified: false,
+          message: "Missing or invalid order details.",
+        });
+    }
+
+    const adminDb = getAdminDb(); // <- throws a readable error if misconfigured; caught below
+
     // Idempotency: if this reference was already recorded (e.g. the client
     // retried after a network blip), return the existing order instead of
     // verifying and writing again.
@@ -86,20 +96,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = (await paystackRes.json()) as PaystackVerifyResponse;
 
     if (!paystackRes.ok || !result.status || !result.data) {
-      return res.status(402).json({
-        verified: false,
-        message: result.message || "Verification failed.",
-      });
+      return res
+        .status(402)
+        .json({
+          verified: false,
+          message: result.message || "Verification failed.",
+        });
     }
 
     const { status, amount, currency } = result.data;
     const expectedKobo = Math.round(expectedAmountNaira * 100);
 
     if (status !== "success") {
-      return res.status(402).json({
-        verified: false,
-        message: `Payment was not successful (${status}).`,
-      });
+      return res
+        .status(402)
+        .json({
+          verified: false,
+          message: `Payment was not successful (${status}).`,
+        });
     }
     if (currency !== "NGN") {
       return res
@@ -134,10 +148,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ verified: true, order });
   } catch (err) {
+    // This now catches Firebase Admin init failures too, so the client gets
+    // a real message instead of a raw 500 it can't parse as JSON.
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Something went wrong verifying your payment.";
     console.error("verify-payment error:", err);
-    return res.status(500).json({
-      verified: false,
-      message: "Something went wrong verifying your payment.",
-    });
+    return res.status(500).json({ verified: false, message });
   }
 }
