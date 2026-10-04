@@ -26,6 +26,7 @@ export interface Product {
   colors: string[];
   swatches?: ColorSwatch[];
   createdAt: string;
+  stockQuantity?: number;
 }
 
 export interface CartItem {

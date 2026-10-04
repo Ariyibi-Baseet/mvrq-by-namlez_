@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 import { useProducts } from "../../context/ProductContext";
 import { Product, Category } from "../../types/product";
@@ -65,7 +66,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   );
   const [description, setDescription] = useState(product?.description ?? "");
   const [badge, setBadge] = useState<Product["badge"]>(product?.badge);
-  const [inStock, setInStock] = useState(product?.inStock ?? true);
+  // Stock quantity is now the single source of truth for availability:
+  // inStock is derived from it (quantity > 0) when saving, instead of being
+  // a separate manual toggle that can drift out of sync with reality.
+  const [stockQuantity, setStockQuantity] = useState(
+    product?.stockQuantity !== undefined ? String(product.stockQuantity) : "10",
+  );
   const [sizes, setSizes] = useState<string[]>(
     product?.sizes ?? ["S", "M", "L", "XL"],
   );
@@ -102,6 +108,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
     const priceNum = parseFloat(price);
     const originalNum = originalPrice ? parseFloat(originalPrice) : undefined;
+    const stockNum = parseInt(stockQuantity, 10);
 
     if (!name.trim()) return setFormError("Enter a product name.");
     if (!(priceNum > 0)) return setFormError("Enter a price greater than 0.");
@@ -110,6 +117,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         "Original price must be higher than the current price.",
       );
     if (images.length === 0) return setFormError("Add at least one photo.");
+    if (!Number.isFinite(stockNum) || stockNum < 0)
+      return setFormError("Enter a stock quantity of 0 or more.");
 
     const data = {
       name: name.trim(),
@@ -117,7 +126,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       price: priceNum,
       originalPrice: originalNum,
       badge: badge || undefined,
-      inStock,
+      inStock: stockNum > 0,
+      stockQuantity: stockNum,
       image: images[0], // cover image, used everywhere in the store
       images,
       description:
@@ -145,7 +155,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
-  return (
+  // Rendered through a portal straight onto <body>. A "fixed" element can
+  // still get trapped under a sticky navbar if ANY ancestor between it and
+  // <body> has a transform, filter, or similar property set (even briefly,
+  // from an animation class) — that turns "fixed" into "positioned relative
+  // to that ancestor" instead of the real viewport. Mounting here sidesteps
+  // the whole problem regardless of what the rest of the page does.
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-6 bg-navy-950/90 backdrop-blur-sm animate-fade-in">
       <form
         onSubmit={handleSubmit}
@@ -328,18 +344,31 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     ))}
                   </div>
                 </div>
+              </section>
 
-                <label className="flex items-center gap-3 cursor-pointer select-none pt-1">
+              <section className="space-y-4 pt-8 border-t border-navy-800 light:border-slate-200">
+                <h3 className={eyebrowCls}>Stock</h3>
+                <div>
+                  <label htmlFor="pf-stock" className={labelCls}>
+                    Units available *
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={inStock}
-                    onChange={(e) => setInStock(e.target.checked)}
-                    className="w-4 h-4 accent-amber-400"
+                    id="pf-stock"
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    step="1"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    placeholder="e.g. 10"
+                    className={`${inputCls} font-mono`}
                   />
-                  <span className="text-sm text-slate-200 light:text-navy-900">
-                    Available to buy (in stock)
-                  </span>
-                </label>
+                  <p className="text-[11px] font-mono text-slate-500 mt-1.5 leading-relaxed">
+                    Drops by 1 automatically each time this item sells. Set to 0
+                    to show "Sold Out" right away — the product switches back
+                    the moment you raise this number again.
+                  </p>
+                </div>
               </section>
             </div>
           </div>
@@ -382,6 +411,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 };
