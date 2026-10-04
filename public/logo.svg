@@ -1,0 +1,32 @@
+ <svg
+    viewBox="0 0 32 32"
+    className="w-7 h-7 sm:w-[34px] sm:h-[34px] shrink-0 transition-transform duration-300 group-hover:scale-110"
+    aria-hidden="true"
+  >
+    <defs>
+      <linearGradient
+        id="mvrq-gold"
+        x1="0"
+        y1="0"
+        x2="32"
+        y2="32"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#F0CB8A" />
+        <stop offset="0.5" stopColor="#C98F4A" />
+        <stop offset="1" stopColor="#8F5A26" />
+      </linearGradient>
+    </defs>
+    {[
+      [16, 8.5],
+      [8.5, 16],
+      [23.5, 16],
+      [16, 23.5],
+    ].map(([cx, cy]) => (
+      <polygon
+        key={`${cx}-${cy}`}
+        points={`${cx},${cy - 6.6} ${cx + 6.6},${cy} ${cx},${cy + 6.6} ${cx - 6.6},${cy}`}
+        fill="url(#mvrq-gold)"
+      />
+    ))}
+  </svg>

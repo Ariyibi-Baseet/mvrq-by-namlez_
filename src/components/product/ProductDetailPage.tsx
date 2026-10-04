@@ -31,24 +31,20 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [product.id]);
 
+  // Real stock, kept in sync live by Firestore. Products added before the
+  // stock feature existed have no stockQuantity field — treat those as
+  // unlimited (no "only N left" message, no cap on the quantity picker).
+  const hasStockLimit = typeof product.stockQuantity === "number";
+  const stockCount = product.stockQuantity ?? Infinity;
+  const canOrder = product.inStock && stockCount > 0;
+  const atMaxQuantity = hasStockLimit && quantity >= stockCount;
+
   const handleAddToCart = () => {
-    if (!product.inStock) return;
+    if (!canOrder) return;
     addToCart(product, selectedSize, selectedColor, quantity);
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 2000);
   };
-
-  const getStockCount = (id: string) => {
-    // Generate realistic stock counts per item
-    if (id === "p1") return 8;
-    if (id === "p2") return 3;
-    if (id === "p3") return 5;
-    if (id === "p5") return 4;
-    if (id === "p6") return 12;
-    return 6;
-  };
-
-  const stockCount = getStockCount(product.id);
 
   return (
     <div className="min-h-screen bg-navy-950 light:bg-slate-50 text-slate-100 light:text-navy-950 transition-colors duration-300 animate-fade-in pb-24">
@@ -87,9 +83,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             {product.badge === "SALE" && (
               <span className="sale-badge">Sale</span>
             )}
-            {product.badge === "SOLD OUT" && (
-              <span className="sold-out-badge">Sold Out</span>
-            )}
+            {!canOrder && <span className="sold-out-badge">Sold Out</span>}
           </div>
 
           {/* Right Column: Specifications & Ordering */}
@@ -211,7 +205,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="flex items-center border border-navy-800 light:border-slate-300 bg-navy-900/40 light:bg-white w-max font-mono text-sm">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors"
+                  disabled={quantity <= 1}
+                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                 >
                   –
                 </button>
@@ -219,8 +214,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   {quantity}
                 </span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors"
+                  onClick={() =>
+                    setQuantity((q) =>
+                      hasStockLimit ? Math.min(stockCount, q + 1) : q + 1,
+                    )
+                  }
+                  disabled={atMaxQuantity}
+                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-white light:hover:text-navy-950 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                 >
                   +
                 </button>
@@ -231,14 +231,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="pt-2">
               <button
                 onClick={handleAddToCart}
-                disabled={!product.inStock}
+                disabled={!canOrder}
                 className={`w-full py-4 uppercase font-mono text-xs tracking-[0.25em] font-semibold transition-all duration-300 shadow-xl ${
-                  product.inStock
+                  canOrder
                     ? "bg-white text-navy-950 hover:bg-slate-200 border border-white"
                     : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
                 }`}
               >
-                {!product.inStock
+                {!canOrder
                   ? "SOLD OUT"
                   : addedToast
                     ? "ADDED TO CART!"
@@ -246,8 +246,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </button>
             </div>
 
-            {/* Stock Alert Notice */}
-            {product.inStock && (
+            {/* Stock Alert Notice: only for tracked products, and only once
+                stock is genuinely low, so it reads as a real signal rather
+                than decoration on every item. */}
+            {canOrder && hasStockLimit && stockCount <= 5 && (
               <p className="text-xs font-mono text-amber-400 light:text-amber-600">
                 Only {stockCount} left in stock.
               </p>
