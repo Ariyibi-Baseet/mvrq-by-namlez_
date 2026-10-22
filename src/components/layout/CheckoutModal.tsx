@@ -10,9 +10,14 @@ import {
 import { useCart } from "../../context/CartContext";
 import { payWithPaystack, generateReference } from "../../lib/paystack";
 import { buildOrderWhatsAppLink } from "../../lib/whatsapp";
+import { getDisplayPrice } from "../../lib/pricing";
 import { Order } from "../../types/order";
 
 type Stage = "form" | "paying" | "verifying" | "success";
+
+// How long the "Order Received" screen stays up before the WhatsApp redirect
+// fires. Raise it to let the customer read the confirmation longer; set to 0
+// to redirect immediately (the old behavior).
 const WHATSAPP_REDIRECT_DELAY_MS = 4000; // 4 seconds
 
 export const CheckoutModal: React.FC = () => {
@@ -31,6 +36,12 @@ export const CheckoutModal: React.FC = () => {
   const [whatsappLink, setWhatsappLink] = useState("");
   const autoRedirected = useRef(false);
 
+  // `subtotal` from useCart() is already Paystack-inclusive (each item's
+  // price has the processing fee baked in — see src/lib/pricing.ts), so it
+  // IS the amount to charge. No separate fee line is added here: doing so
+  // on top of already-marked-up prices would charge the fee twice.
+  const total = subtotal;
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -40,16 +51,11 @@ export const CheckoutModal: React.FC = () => {
     notes: "",
   });
 
-  // Try to open WhatsApp automatically once payment is confirmed. Many
-  // mobile browsers allow this since it follows directly from the user's
-  // own "Pay" tap; some (and most desktop browsers) block it as a popup.
-  // Either way, the button below always works as a manual fallback.
-  // useEffect(() => {
-  //   if (stage === "success" && whatsappLink && !autoRedirected.current) {
-  //     autoRedirected.current = true;
-  //     window.open(whatsappLink, "_blank", "noopener");
-  //   }
-  // }, [stage, whatsappLink]);
+  // Try to open WhatsApp automatically once payment is confirmed, after a
+  // short delay so the customer sees the "Order Received" screen first. Many
+  // mobile browsers allow this since it still follows from the user's own
+  // "Pay" tap; some (and most desktop browsers) block it as a popup. Either
+  // way, the button below always works as a manual fallback.
   useEffect(() => {
     if (stage !== "success" || !whatsappLink || autoRedirected.current) return;
     autoRedirected.current = true;
@@ -67,7 +73,7 @@ export const CheckoutModal: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    if (subtotal <= 0 || cart.length === 0) {
+    if (total <= 0 || cart.length === 0) {
       setError("Your cart is empty.");
       return;
     }
@@ -79,7 +85,7 @@ export const CheckoutModal: React.FC = () => {
     try {
       paystackReference = await payWithPaystack({
         email: formData.email,
-        amountNaira: subtotal,
+        amountNaira: total,
         reference,
         metadata: { fullName: formData.fullName, phone: formData.phone },
       });
@@ -98,12 +104,18 @@ export const CheckoutModal: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reference: paystackReference,
-          expectedAmountNaira: subtotal,
+          // Must match exactly what was charged via payWithPaystack above —
+          // the server rejects the payment if these don't agree, as a guard
+          // against a tampered client claiming a lower amount than it paid.
+          expectedAmountNaira: total,
           customer: formData,
           items: cart.map((item) => ({
             productId: item.product.id,
             name: item.product.name,
-            price: item.product.price,
+            // Record the price actually charged per unit (fee-inclusive),
+            // not the raw net price, so this order's total matches its
+            // line items and what Paystack verifies.
+            price: getDisplayPrice(item.product.price),
             quantity: item.quantity,
             size: item.selectedSize,
             color: item.selectedColor,
@@ -230,7 +242,9 @@ export const CheckoutModal: React.FC = () => {
                         </div>
                       </div>
                       <div className="font-mono text-slate-200 font-bold">
-                        {formatPrice(item.product.price * item.quantity)}
+                        {formatPrice(
+                          getDisplayPrice(item.product.price) * item.quantity,
+                        )}
                       </div>
                     </div>
                   ))}
@@ -238,7 +252,7 @@ export const CheckoutModal: React.FC = () => {
                 <div className="border-t border-navy-800 light:border-slate-200 pt-3 flex justify-between items-center font-mono text-sm">
                   <span className="text-slate-400">TOTAL AMOUNT</span>
                   <span className="font-bold text-electric-400 text-base">
-                    {formatPrice(subtotal)}
+                    {formatPrice(total)}
                   </span>
                 </div>
               </div>
@@ -349,7 +363,7 @@ export const CheckoutModal: React.FC = () => {
                         PAYMENT…
                       </>
                     )}
-                    {stage === "form" && <>PAY {formatPrice(subtotal)}</>}
+                    {stage === "form" && <>PAY {formatPrice(total)}</>}
                   </button>
                 </fieldset>
               </form>

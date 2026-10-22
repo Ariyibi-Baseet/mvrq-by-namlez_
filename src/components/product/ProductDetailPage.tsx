@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Truck, ChevronRight } from "lucide-react";
 import { Product } from "../../types/product";
 import { useCart } from "../../context/CartContext";
+import { getDisplayPrice } from "../../lib/pricing";
 
 interface ProductDetailPageProps {
   product: Product;
@@ -100,11 +101,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               {/* Price */}
               <div className="flex items-center gap-3">
                 <span className="font-serif text-2xl md:text-3xl font-semibold text-slate-100 light:text-navy-950">
-                  {formatPrice(product.price)}
+                  {formatPrice(getDisplayPrice(product.price))}
                 </span>
                 {product.originalPrice && (
                   <span className="text-sm font-mono text-slate-500 line-through">
-                    {formatPrice(product.originalPrice)}
+                    {formatPrice(getDisplayPrice(product.originalPrice))}
                   </span>
                 )}
               </div>
