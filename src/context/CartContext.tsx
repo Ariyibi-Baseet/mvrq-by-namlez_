@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { CartItem, Product } from "../types/product";
+import { getDisplayPrice } from "../lib/pricing";
 
 interface CartContextType {
   cart: CartItem[];
@@ -20,6 +21,7 @@ interface CartContextType {
   ) => void;
   clearCart: () => void;
   totalItems: number;
+  /** What the customer actually pays — each item's Paystack-inclusive price × quantity, summed. */
   subtotal: number;
   isCheckoutOpen: boolean;
   setIsCheckoutOpen: (open: boolean) => void;
@@ -120,8 +122,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Each item's price here is already the Paystack-inclusive amount the
+  // customer sees on the product page (see src/lib/pricing.ts), so summing
+  // these is exactly what gets charged — no separate fee line needed, and
+  // nothing to keep in sync between "what's shown" and "what's charged".
   const subtotal = cart.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + getDisplayPrice(item.product.price) * item.quantity,
     0,
   );
 
